@@ -39,7 +39,7 @@ function SignupPage() {
       <h3 className="text-orange-600 text-center italic text-2xl font-medium mb-5">
         The Storynest
       </h3>
-      <div className="mt-5 logincard shadow w-3/4 md:w-1/2 mx-auto">
+      <div className="mt-5 flex flex-col bg-white border rounded-md shadow w-3/4 md:w-1/2 mx-auto">
         <Formik
           initialValues={{}}
           onSubmit={(value)=>{
@@ -170,7 +170,7 @@ function SignupPage() {
                       <span>Processing...</span>
                     </>
                   ) : (
-                    <span className="">Sign up</span>
+                    <span className="font-medium">Sign up</span>
                   )}
                 </button>
               </Form>

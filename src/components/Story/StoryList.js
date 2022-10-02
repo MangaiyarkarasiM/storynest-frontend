@@ -19,7 +19,7 @@ const StoryList = (props) => {
                   <img
                     src={story.coverImage}
                     alt={story.title}
-                    style={{ minHeight: "10rem", maxHeight: "10rem" }}
+                    className="min-h-40 max-h-40"
                   ></img>
                 </div>
                 <div className="w-2/3">
