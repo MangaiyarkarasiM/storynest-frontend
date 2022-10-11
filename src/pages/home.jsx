@@ -33,7 +33,7 @@ const HomePage = () => {
         <div className="mb-8">
           <h2 className="font-bold text-xl md:text-3xl">Top Picks For You</h2>
         </div>
-        <div className="flex flex-row flex-wrap gap-x-5">
+        <div className="flex flex-row flex-wrap gap-x-5 gap-y-2">
           {stories?.map((story) => {
             return (
               <div className="flex flex-col gap-y-4" key={story.id}>

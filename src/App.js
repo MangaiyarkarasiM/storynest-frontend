@@ -17,14 +17,20 @@ import PartsPage from "./pages/parts";
 import ViewStoryPage from "./pages/viewstory";
 import Footer from "./components/Footer/Footer";
 import ViewPartPage from "./pages/viewpart";
+import { io } from "socket.io-client";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const exclusionArray = ['/', '/login', '/signup', '/mystories/'];
-const footerExclusionArray = ['/', '/login', '/signup'];
+const socket = io("http://localhost:5000", { autoConnect: false });
+
+const exclusionArray = ["/", "/login", "/signup", "/mystories/"];
+const footerExclusionArray = ["/", "/login", "/signup"];
 
 function App() {
   let [message, setMessage] = useState("");
   const [user, setUser] = useState({});
   const [spin, setSpin] = useState(false);
+  const [shouldShow, setShouldShow] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -35,6 +41,27 @@ function App() {
     user_id === null || token === null || role === null
       ? navigate("/login")
       : setUser({ user_id, token, role });
+  }, []);
+
+  useEffect(() => {
+    socket.on("notification", (data) => {
+      console.log(data.message);
+      setShouldShow(true)
+
+      toast(data.message, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
+      setInterval(()=>{
+        setShouldShow(false);
+      },5000)
+    });
   }, []);
 
   const onLogin = async (value) => {
@@ -48,6 +75,10 @@ function App() {
         token: res.data.token,
         role: res.data.role,
       });
+      socket.connect();
+      socket.emit("data", {
+        id: res.data.user_id,
+      });
       setMessage("");
       setSpin(false);
       navigate("/home");
@@ -57,7 +88,7 @@ function App() {
     }
   };
 
-  const getUserWithUserId = async (id)=>{
+  const getUserWithUserId = async (id) => {
     let res = await fetchApi.get(`/users/${id}`);
     if (res.data.statusCode === 200) {
       setMessage("");
@@ -67,79 +98,80 @@ function App() {
       setSpin(false);
       setMessage(res.data.message);
     }
-  }
+  };
 
-  const onSignOut = ()=>{
+  const onSignOut = () => {
     sessionStorage.clear();
-    navigate('/login');
-  }
+    socket.disconnect();
+    navigate("/login");
+  };
 
-  const onAuthFail =()=>{
-    window.alert('Your session has ended. Please login again to authenticate');
+  const onAuthFail = () => {
+    window.alert("Your session has ended. Please login again to authenticate");
     setSpin(false);
-    navigate('/login');
-  }
+    navigate("/login");
+  };
 
-  const onEditProfile = async(value,id)=>{
-    let res = await fetchApi.put(`/users/${id}`,value, {
+  const onEditProfile = async (value, id) => {
+    let res = await fetchApi.put(`/users/${id}`, value, {
       headers: {
-        "Authorization" : `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${user.token}`,
+        "Content-Type": "application/json",
+      },
     });
-    if(res.data.statusCode === 401){
+    if (res.data.statusCode === 401) {
       onAuthFail();
-    }else if (res.data.statusCode === 200) {
+    } else if (res.data.statusCode === 200) {
       setMessage("");
-      window.alert('Profile details updated successfully');
+      window.alert("Profile details updated successfully");
     } else {
       setMessage(res.data.message);
     }
     setSpin(false);
-  }
+  };
 
-  const editStoryWithId = async(value,id)=>{
-    let res = await fetchApi.put(`/stories/${id}`,value, {
+  const editStoryWithId = async (value, id) => {
+    let res = await fetchApi.put(`/stories/${id}`, value, {
       headers: {
-        "Authorization" : `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${user.token}`,
+        "Content-Type": "application/json",
+      },
     });
-    if(res.data.statusCode === 401){
+    if (res.data.statusCode === 401) {
       onAuthFail();
-    }else if (res.data.statusCode === 200) {
+    } else if (res.data.statusCode === 200) {
       setMessage("");
-      window.alert('Story details updated successfully');
+      window.alert("Story details updated successfully");
     } else {
       setMessage(res.data.message);
     }
     setSpin(false);
-  }
+  };
 
-  const addStory = async(value)=>{
-    let data = {...value};
+  const addStory = async (value) => {
+    let data = { ...value };
     data.author = user.user_id;
-    let res = await fetchApi.post('stories/create',data, {
+    let res = await fetchApi.post("stories/create", data, {
       headers: {
-        "Authorization" : `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${user.token}`,
+        "Content-Type": "application/json",
+      },
     });
-    if(res.data.statusCode === 401){
+    if (res.data.statusCode === 401) {
       onAuthFail();
-    }else if (res.data.statusCode === 200) {
+    } else if (res.data.statusCode === 200) {
       setMessage("");
-      window.alert('Story created successfully');
-      navigate('/mystories');
+      window.alert("Story created successfully");
+      navigate("/mystories");
     } else {
       setMessage(res.data.message);
     }
     setSpin(false);
-  }
+  };
 
-  const getAllStories = async()=>{
+  const getAllStories = async () => {
     let token = sessionStorage.getItem("__token__");
-    let res = await fetchApi.get('/stories', {
+    let res = await fetchApi.get("/stories", {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
@@ -152,7 +184,7 @@ function App() {
     } else {
       console.log(res.data.error);
     }
-  }
+  };
 
   async function getStoryWithId(id) {
     let token = sessionStorage.getItem("__token__");
@@ -171,26 +203,26 @@ function App() {
     }
   }
 
-  const createPart = async(story)=>{
+  const createPart = async (story) => {
     let data = {
-      partName: `Untitled Part ${story.parts.length+1}`,
-      story_id: story.id
-    }
-    let res = await fetchApi.post('/parts/create',data,{
+      partName: `Untitled Part ${story.parts.length + 1}`,
+      story_id: story.id,
+    };
+    let res = await fetchApi.post("/parts/create", data, {
       headers: {
-        "Authorization" : `Bearer ${user.token}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Bearer ${user.token}`,
+        "Content-Type": "application/json",
+      },
     });
-    if(res.data.statusCode === 401){
+    if (res.data.statusCode === 401) {
       onAuthFail();
-    }else if (res.data.statusCode === 200) {
+    } else if (res.data.statusCode === 200) {
       navigate(`/mystories/${story.id}/write/${res.data.part.id}`);
     } else {
       console.log(res.data);
       setMessage(res.data.message);
     }
-  }
+  };
 
   async function getPartWithId(partId) {
     let token = sessionStorage.getItem("__token__");
@@ -208,7 +240,7 @@ function App() {
       console.log(res.data.error);
     }
   }
-  
+
   const onDeletePart = async (id) => {
     //console.log(id);
     let token = sessionStorage.getItem("__token__");
@@ -229,8 +261,29 @@ function App() {
   };
 
   return (
-    <GlobalProvider value={{ user, onAuthFail, message, setMessage, onLogin, onSignOut, addStory, editStoryWithId, getAllStories, getStoryWithId, createPart, getPartWithId, onDeletePart, getUserWithUserId, onEditProfile, spin, setSpin }}>
-      {exclusionArray.indexOf(location.pathname.slice(0,11)) < 0 && <Navbar/>}
+    <GlobalProvider
+      value={{
+        user,
+        onAuthFail,
+        message,
+        setMessage,
+        onLogin,
+        onSignOut,
+        addStory,
+        editStoryWithId,
+        getAllStories,
+        getStoryWithId,
+        createPart,
+        getPartWithId,
+        onDeletePart,
+        getUserWithUserId,
+        onEditProfile,
+        spin,
+        setSpin,
+        socket,
+      }}
+    >
+      {exclusionArray.indexOf(location.pathname.slice(0, 11)) < 0 && <Navbar />}
       <Routes>
         <Route path="/login" element={<LoginPage />}></Route>
         <Route path="/signup" element={<SignupPage />}></Route>
@@ -238,15 +291,36 @@ function App() {
         <Route path="/mystories" element={<MystoriesPage />}></Route>
         <Route path="/mystories/new" element={<NewStoryPage />}></Route>
         <Route path="/mystories/:id" element={<StoryPage />}></Route>
-        <Route path="/mystories/:id/write/:partId" element={<PartsPage />}></Route>
-        <Route path="/stories/:category" element={<StoriesPage/>}></Route>
-        <Route path="/story/:id" element={<ViewStoryPage/>}></Route>
-        <Route path="/viewstory/:id" element={<ViewPartPage/>}></Route>
-        <Route path="/search/:searchString" element={<SearchPage/>}></Route>
-        <Route path="/user/:id" element={<ProfilePage/>}></Route>
+        <Route
+          path="/mystories/:id/write/:partId"
+          element={<PartsPage />}
+        ></Route>
+        <Route path="/stories/:category" element={<StoriesPage />}></Route>
+        <Route path="/story/:id" element={<ViewStoryPage />}></Route>
+        <Route path="/viewstory/:id" element={<ViewPartPage />}></Route>
+        <Route path="/search/:searchString" element={<SearchPage />}></Route>
+        <Route path="/user/:id" element={<ProfilePage />}></Route>
         <Route path="/" element={<LoginPage />}></Route>
       </Routes>
-      {footerExclusionArray.indexOf(location.pathname) < 0 && <Footer/>}
+      {shouldShow && (
+        <>
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+          {/* Same as */}
+          <ToastContainer />
+        </>
+      )}
+      {footerExclusionArray.indexOf(location.pathname) < 0 && <Footer />}
     </GlobalProvider>
   );
 }

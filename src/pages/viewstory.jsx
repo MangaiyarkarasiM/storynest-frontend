@@ -6,14 +6,15 @@ import fetchApi from "../utils/fetchApi";
 
 const ViewStoryPage = () => {
   let { id } = useParams();
-  let { onAuthFail, getStoryWithId } = useContext(GlobalContext);
+  let { onAuthFail, getStoryWithId, socket } = useContext(GlobalContext);
   const [story, setStory] = useState({});
   const [parts, setParts] = useState([]);
   const [stat, setStat] = useState({});
   const [isVoted, setIsVoted] = useState(false);
 
-  const updateStat = async () => {
+  const updateStat = async (shouldNotify) => {
     let token = sessionStorage.getItem("__token__");
+    let user = sessionStorage.getItem("__user_id__")
     let res = await fetchApi.post(`/storystats/create`, stat, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -23,13 +24,16 @@ const ViewStoryPage = () => {
     if (res.data.statusCode === 401) {
       onAuthFail();
     } else if (res.data.statusCode === 200) {
+      if(shouldNotify){
+        socket.emit('like', user, story);
+      }
       getStory();
     } else {
       console.log(res.data.error);
     }
   };
 
-  const editStoryWithId = async()=>{
+  const editStoryWithId = async(shouldNotify)=>{
     let token = sessionStorage.getItem("__token__");
     let res = await fetchApi.put(`/stories/${story.id}`,story, {
       headers: {
@@ -40,7 +44,7 @@ const ViewStoryPage = () => {
     if(res.data.statusCode === 401){
       onAuthFail();
     }else if (res.data.statusCode === 200) {
-      updateStat();
+      updateStat(shouldNotify);
     } else {
       console.log(res.data.message);
     }
@@ -95,15 +99,17 @@ const ViewStoryPage = () => {
   },[stat,story]);
 
   const onVote = () => {
+    let shouldNotify = false;
     let user_id = sessionStorage.getItem("__user_id__");
     let index = stat.voters?.indexOf(user_id);
     if (index >= 0) {
       stat.voters.splice(index, 1);
     } else {
       stat.voters.push(user_id);
+      shouldNotify = true;
     }
     story.vote = stat.voters.length;
-    editStoryWithId();
+    editStoryWithId(shouldNotify);
   };
 
   return (
