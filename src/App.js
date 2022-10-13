@@ -21,7 +21,7 @@ import { io } from "socket.io-client";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const socket = io("http://localhost:5000", { autoConnect: false });
+let socket = io("https://storynest.herokuapp.com", { autoConnect: false });
 
 const exclusionArray = ["/", "/login", "/signup", "/mystories/"];
 const footerExclusionArray = ["/", "/login", "/signup"];
@@ -30,24 +30,31 @@ function App() {
   let [message, setMessage] = useState("");
   const [user, setUser] = useState({});
   const [spin, setSpin] = useState(false);
-  const [shouldShow, setShouldShow] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
 
   useEffect(() => {
     let user_id = sessionStorage.getItem("__user_id__");
     let token = sessionStorage.getItem("__token__");
     let role = sessionStorage.getItem("__role__");
-    user_id === null || token === null || role === null
-      ? navigate("/login")
-      : setUser({ user_id, token, role });
+    if(user_id === null || token === null || role === null || socket === undefined){
+      navigate("/login")
+    }else{
+      setUser({ user_id, token, role });
+      socket.disconnect();
+      socket.connect();
+      socket.emit("data", {
+        id: user_id,
+      });
+    }   
   }, []);
 
   useEffect(() => {
     socket.on("notification", (data) => {
       console.log(data.message);
-      setShouldShow(true)
-
+      setShowToast(true)
       toast(data.message, {
         position: "top-right",
         autoClose: 5000,
@@ -59,7 +66,7 @@ function App() {
         theme: "light",
       });
       setInterval(()=>{
-        setShouldShow(false);
+        setShowToast(false);
       },5000)
     });
   }, []);
@@ -302,7 +309,7 @@ function App() {
         <Route path="/user/:id" element={<ProfilePage />}></Route>
         <Route path="/" element={<LoginPage />}></Route>
       </Routes>
-      {shouldShow && (
+      {showToast && (
         <>
           <ToastContainer
             position="top-right"
